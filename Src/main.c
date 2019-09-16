@@ -21,10 +21,17 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
+#define TRUE 1
+#define FALSE 0
+typedef uint8_t bool;
+
 #define BUFFER_SIZE 32
 
-uint8_t transmitBuffer[BUFFER_SIZE];
-uint8_t receiveBuffer[BUFFER_SIZE];
+uint8_t transmitBuffer[BUFFER_SIZE] = {0};
+uint8_t receiveBuffer[BUFFER_SIZE] = {0};
+uint8_t receiveByte = 0;
+uint16_t receiveOffset = 0;
+bool allowSend = FALSE;
 
 UART_HandleTypeDef huart1;
 
@@ -58,6 +65,12 @@ UART_HandleTypeDef huart1;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
+void resetBytes(uint8_t *pData, uint16_t size);
+
+void sendUARTInt(unsigned int value);
+
+bool cmpStr(const uint8_t *src, const char *target);
+
 static void MX_GPIO_Init(void);
 
 static void MX_USART1_UART_Init(void);
@@ -69,6 +82,34 @@ static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART1) {
+        receiveBuffer[receiveOffset++] = receiveByte;
+
+        if (receiveOffset >= BUFFER_SIZE) {
+            receiveOffset = 0;
+        }
+
+        /* Receive one byte in interrupt mode */
+        HAL_UART_Receive_IT(&huart1, &receiveByte, 1);
+    }
+    if (allowSend) {
+        if (cmpStr(receiveBuffer, "STOP")) {
+            allowSend = FALSE;
+            resetBytes(receiveBuffer, BUFFER_SIZE);
+            receiveOffset = 0;
+        }
+        return;
+    }
+    if (cmpStr(receiveBuffer, "START")) {
+        allowSend = TRUE;
+        resetBytes(receiveBuffer, BUFFER_SIZE);
+        receiveOffset = 0;
+    }
+}
+
 
 /**
   * @brief  The application entry point.
@@ -109,17 +150,55 @@ int main(void) {
         transmitBuffer[i] = i;
     }
 
+    HAL_UART_Receive_IT(&huart1, &receiveByte, 1);
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     while (1) {
-        /* USER CODE END WHILE */
 
         HAL_Delay(1000);
-        HAL_UART_Receive_IT(&huart1, receiveBuffer, BUFFER_SIZE);
-        HAL_UART_Transmit_IT(&huart1, transmitBuffer, BUFFER_SIZE);
+        if (allowSend) {
+            sendUARTInt(12335);
+        }
+        /* USER CODE END WHILE
+
+        HAL_Delay(1000);
+        if (HAL_UART_Receive(&huart1, receiveBuffer, BUFFER_SIZE, 100) == HAL_OK) {
+            HAL_UART_Transmit(&huart1, receiveBuffer, BUFFER_SIZE, 100);
+        }
+        resetBytes(receiveBuffer, BUFFER_SIZE);
         /* USER CODE BEGIN 3 */
     }
     /* USER CODE END 3 */
+}
+
+void sendUARTInt(unsigned int value) {
+    uint8_t bytes[4];
+
+    bytes[0] = (value >> 24) & 0xFF;
+    bytes[1] = (value >> 16) & 0xFF;
+    bytes[2] = (value >> 8) & 0xFF;
+    bytes[3] = value & 0xFF;
+    HAL_UART_Transmit(&huart1, bytes, 4, 100);
+}
+
+bool cmpStr(const uint8_t *src, const char *target) {
+    char readChar;
+    for (int i = 0; i < BUFFER_SIZE; i++) {
+        readChar = target[i];
+        if (readChar == '\0') {
+            return TRUE;
+        }
+        if (readChar != src[i]) {
+            return FALSE;
+        }
+    }
+    return FALSE;
+}
+
+void resetBytes(uint8_t *pData, uint16_t size) {
+    for (int i = 0; i < size; i++) {
+        pData[i] = 0;
+    }
 }
 
 /**
