@@ -153,11 +153,16 @@ int main(void) {
     HAL_UART_Receive_IT(&huart1, &receiveByte, 1);
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
+    int value = 0;
     while (1) {
 
         HAL_Delay(1000);
         if (allowSend) {
-            sendUARTInt(12335);
+            value += 100;
+            sendUARTInt(value);
+            if (value > 3000) {
+                value = 0;
+            }
         }
         /* USER CODE END WHILE
 
