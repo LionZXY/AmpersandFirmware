@@ -27,7 +27,6 @@ typedef uint8_t bool;
 
 #define BUFFER_SIZE 32
 
-uint8_t transmitBuffer[BUFFER_SIZE] = {0};
 uint8_t receiveBuffer[BUFFER_SIZE] = {0};
 uint8_t receiveByte = 0;
 uint16_t receiveOffset = 0;
@@ -151,20 +150,14 @@ int main(void) {
 
     HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_0);
 
-    for (int i = 0; i < BUFFER_SIZE; i++) {
-        transmitBuffer[i] = i;
-    }
-
     HAL_UART_Receive_IT(&huart1, &receiveByte, 1);
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
     HAL_ADCEx_Calibration_Start(&hadc);
     HAL_ADC_Start(&hadc);
-    int value = 0;
     while (1) {
-        value = HAL_ADC_GetValue(&hadc);//Возьмем результат и сохраним его в переменную
         if (allowSend) {
-            sendUARTInt(value);
+            sendUARTInt(HAL_ADC_GetValue(&hadc));
         }
         //HAL_Delay(20);
     }
