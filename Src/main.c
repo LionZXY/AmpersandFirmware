@@ -158,28 +158,27 @@ int main(void) {
     HAL_UART_Receive_IT(&huart1, &receiveByte, 1);
     /* Infinite loop */
     /* USER CODE BEGIN WHILE */
+    HAL_ADCEx_Calibration_Start(&hadc);
+    HAL_ADC_Start(&hadc);
     int value = 0;
     while (1) {
-        HAL_ADC_Start(&hadc);
-        HAL_ADC_PollForConversion(&hadc, 100); //Затем нам нужно дождаться конца преобразования.
         value = HAL_ADC_GetValue(&hadc);//Возьмем результат и сохраним его в переменную
-        HAL_ADC_Stop(&hadc); // Остановим преобразования
         if (allowSend) {
             sendUARTInt(value);
         }
-        HAL_Delay(20);
+        //HAL_Delay(20);
     }
     /* USER CODE END 3 */
 }
 
 void sendUARTInt(uint32_t value) {
-    uint8_t bytes[4];
+    uint8_t bytes[2];
 
-    bytes[0] = (value >> 24) & 0xFF;
-    bytes[1] = (value >> 16) & 0xFF;
-    bytes[2] = (value >> 8) & 0xFF;
-    bytes[3] = value & 0xFF;
-    HAL_UART_Transmit(&huart1, bytes, 4, 100);
+    //bytes[0] = (value >> 24) & 0xFF;
+    //bytes[1] = (value >> 16) & 0xFF;
+    bytes[0] = (value >> 8) & 0xFF;
+    bytes[1] = value & 0xFF;
+    HAL_UART_Transmit(&huart1, bytes, 2, 1000);
 }
 
 bool cmpStr(const uint8_t *src, const char *target) {
@@ -269,7 +268,7 @@ static void MX_ADC_Init(void) {
     hadc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
     hadc.Init.LowPowerAutoWait = DISABLE;
     hadc.Init.LowPowerAutoPowerOff = DISABLE;
-    hadc.Init.ContinuousConvMode = DISABLE;
+    hadc.Init.ContinuousConvMode = ENABLE;
     hadc.Init.DiscontinuousConvMode = DISABLE;
     hadc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
     hadc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
