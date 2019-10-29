@@ -69,7 +69,7 @@ void SystemClock_Config(void);
 
 void resetBytes(uint8_t *pData, uint16_t size);
 
-void sendUARTInt(unsigned int value);
+void sendUARTInt(uint32_t value);
 
 bool cmpStr(const uint8_t *src, const char *target);
 
@@ -160,28 +160,19 @@ int main(void) {
     /* USER CODE BEGIN WHILE */
     int value = 0;
     while (1) {
-
-        HAL_Delay(1000);
+        HAL_ADC_Start(&hadc);
+        HAL_ADC_PollForConversion(&hadc, 100); //Затем нам нужно дождаться конца преобразования.
+        value = HAL_ADC_GetValue(&hadc);//Возьмем результат и сохраним его в переменную
+        HAL_ADC_Stop(&hadc); // Остановим преобразования
         if (allowSend) {
-            value += 100;
             sendUARTInt(value);
-            if (value > 3000) {
-                value = 0;
-            }
         }
-        /* USER CODE END WHILE
-
-        HAL_Delay(1000);
-        if (HAL_UART_Receive(&huart1, receiveBuffer, BUFFER_SIZE, 100) == HAL_OK) {
-            HAL_UART_Transmit(&huart1, receiveBuffer, BUFFER_SIZE, 100);
-        }
-        resetBytes(receiveBuffer, BUFFER_SIZE);
-        /* USER CODE BEGIN 3 */
+        HAL_Delay(20);
     }
     /* USER CODE END 3 */
 }
 
-void sendUARTInt(unsigned int value) {
+void sendUARTInt(uint32_t value) {
     uint8_t bytes[4];
 
     bytes[0] = (value >> 24) & 0xFF;
